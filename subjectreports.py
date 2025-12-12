@@ -79,9 +79,10 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- 3. API 키 설정 ---
+# (예외 타입을 넓게 잡아서 secrets 없을 때도 죽지 않게)
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
-except FileNotFoundError:
+except Exception:
     api_key = None
 
 # --- 4. 헤더 영역 ---
@@ -150,7 +151,7 @@ with st.container(border=True):
     ]
     try:
         selected_tags = st.pills("키워드 버튼", options=filter_options, selection_mode="multi", label_visibility="collapsed")
-    except:
+    except Exception:
         selected_tags = st.multiselect("키워드 선택", filter_options, label_visibility="collapsed")
 
 # [고급 설정] 모델 선택
@@ -170,29 +171,20 @@ if st.button("✨ 과목 세특 생성하기", use_container_width=True):
     elif not student_input:
         st.warning("⚠️ 학생 관찰 내용을 입력해주세요!")
     else:
-        with st.spinner(f'AI가 교과 세특 전문가 모드로 분석 중입니다...'):
+        with st.spinner('AI가 교과 세특 전문가 모드로 분석 중입니다...'):
             try:
+                # API 키 설정
                 genai.configure(api_key=api_key)
 
-# --- 모델 선택 로직 (2025 기준, 2.5 라인 사용 추천) ---
-target_model = "gemini-2.5-flash"  # 기본값: 가격/성능 좋은 플래시
+                # --- 모델 선택 로직 (2025 기준, 2.5 라인 사용 예시) ---
+                target_model = "gemini-2.5-flash"  # 기본값
 
-if "pro" in manual_model:
-    # 고성능 모드
-    target_model = "gemini-2.5-pro"
-elif "flash" in manual_model:
-    # 빠른 모드
-    target_model = "gemini-2.5-flash"
-elif "자동" in manual_model:
-    # 자동은 일단 flash로
-    target_model = "gemini-2.5-flash"
-
-
-    target_model = "gemini-2.5-flash"
-# 또는 manual 선택에 따라
-"gemini-2.5-pro"
-
-
+                if "pro" in manual_model:
+                    target_model = "gemini-2.5-pro"
+                elif "flash" in manual_model:
+                    target_model = "gemini-2.5-flash"
+                elif "자동" in manual_model:
+                    target_model = "gemini-2.5-flash"
 
                 # 모드별 프롬프트 설정
                 if "엄격하게" in mode:
@@ -266,8 +258,10 @@ elif "자동" in manual_model:
                 # 바이트 계산 (한글 3byte)
                 byte_count = 0
                 for char in final_text:
-                    if ord(char) > 127: byte_count += 3
-                    else: byte_count += 1
+                    if ord(char) > 127:
+                        byte_count += 3
+                    else:
+                        byte_count += 1
                 
                 st.success("작성 완료!")
                 
@@ -303,6 +297,3 @@ st.markdown("""
     문의: <a href="mailto:inlove11@naver.com" style="color: #888; text-decoration: none;">inlove11@naver.com</a>
 </div>
 """, unsafe_allow_html=True)
-
-
-
