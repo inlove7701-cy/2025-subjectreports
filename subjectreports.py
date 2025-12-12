@@ -188,6 +188,12 @@ elif "자동" in manual_model:
     target_model = "gemini-2.5-flash"
 
 
+    target_model = "gemini-2.5-flash"
+# 또는 manual 선택에 따라
+"gemini-2.5-pro"
+
+
+
                 # 모드별 프롬프트 설정
                 if "엄격하게" in mode:
                     temp = 0.2
@@ -297,5 +303,6 @@ st.markdown("""
     문의: <a href="mailto:inlove11@naver.com" style="color: #888; text-decoration: none;">inlove11@naver.com</a>
 </div>
 """, unsafe_allow_html=True)
+
 
 
