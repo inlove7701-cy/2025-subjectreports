@@ -85,15 +85,15 @@ except FileNotFoundError:
     api_key = None
 
 # --- 4. 헤더 영역 ---
-st.title("📘 2025 영어 과목세특 메이트")
-st.markdown("<p class='subtitle'>Gift for English Teachers</p>", unsafe_allow_html=True)
+st.title("📘 2025 영어 세특 메이트")
+st.markdown("<p class='subtitle'>Gift for English Teachers (Text Only)</p>", unsafe_allow_html=True)
 st.divider()
 
 if not api_key:
     with st.expander("🔐 관리자 설정 (API Key 입력)"):
         api_key = st.text_input("Google API Key", type="password")
 
-# [수정됨] 영어 세특용 작성 팁
+# 영어 세특용 작성 팁
 st.markdown("""
 <div class="guide-box">
     <span class="guide-title">💡 고퀄리티 영어 세특을 위한 3-Step 가이드</span>
@@ -139,7 +139,7 @@ with st.container(border=True):
         label_visibility="collapsed"
     )
 
-# [카드 3] [수정됨] 영어과 역량 키워드 선택
+# [카드 3] 영어과 역량 키워드 선택
 with st.container(border=True):
     st.markdown('<p class="card-title">③ 강조할 핵심 역량 (다중 선택)</p>', unsafe_allow_html=True)
     filter_options = [
@@ -162,7 +162,7 @@ st.markdown("")
 with st.expander("⚙️ AI 모델 직접 선택하기 (고급 설정)"):
     manual_model = st.selectbox(
         "사용할 모델을 선택하세요 (오류 시 구버전을 선택하세요)",
-        ["🤖 자동 (Auto)", "gemini-1.5-flash (빠름/무료)", "gemini-pro (구버전-안정적)"],
+        ["🤖 자동 (Auto)", "⚡ gemini-1.5-flash (빠름/무료)", "🤖 gemini-1.5-pro (고성능)"],
         index=0
     )
 
@@ -178,21 +178,16 @@ if st.button("✨ 영어 세특 생성하기", use_container_width=True):
             try:
                 genai.configure(api_key=api_key)
 
-                # --- 모델 선택 로직 ---
-                target_model = "gemini-pro"
-                if "flash" in manual_model: target_model = "gemini-1.5-flash"
-                elif "pro" in manual_model and "1.5" not in manual_model: target_model = "gemini-pro"
+                # --- 모델 선택 로직 (여기서 2.5 같은 오타 방지) ---
+                target_model = "gemini-1.5-flash" # 기본값
+                
+                if "pro" in manual_model:
+                    target_model = "gemini-1.5-pro"
+                elif "flash" in manual_model:
+                    target_model = "gemini-1.5-flash"
                 elif "자동" in manual_model:
-                    try:
-                        models = genai.list_models()
-                        available_names = [m.name for m in models if 'generateContent' in m.supported_generation_methods]
-                        for name in available_names:
-                            if 'gemini-1.5-flash' in name:
-                                target_model = name
-                                break
-                            elif 'gemini-pro' in name:
-                                target_model = name
-                    except: pass
+                    # 자동일 때도 안전하게 flash 우선
+                    target_model = "gemini-1.5-flash"
 
                 # 모드별 프롬프트 설정
                 if "엄격하게" in mode:
@@ -221,7 +216,7 @@ if st.button("✨ 영어 세특 생성하기", use_container_width=True):
                 else:
                     tags_str = f"핵심 키워드: {', '.join(selected_tags)}"
 
-                # [핵심 수정] 영어 세특 전용 프롬프트
+                # 영어 세특 전용 프롬프트
                 system_prompt = f"""
                 당신은 입학사정관의 평가 기준을 완벽히 이해하고 있는 고등학교 영어 담당 베테랑 교사입니다.
                 교사가 입력한 [수업 활동 관찰 내용]을 바탕으로, 학생의 영어 학업 역량이 돋보이는 '영어 과목 세부능력 및 특기사항(세특)'을 작성해야 합니다.
@@ -264,6 +259,12 @@ if st.button("✨ 영어 세특 생성하기", use_container_width=True):
                 char_count = len(final_text)
                 char_count_no_space = len(final_text.replace(" ", "").replace("\n", ""))
                 
+                # 바이트 계산
+                byte_count = 0
+                for char in final_text:
+                    if ord(char) > 127: byte_count += 3
+                    else: byte_count += 1
+                
                 st.success("작성 완료!")
                 
                 with st.expander("🔍 역량별 분석 내용 확인하기 (클릭)", expanded=True):
@@ -274,7 +275,8 @@ if st.button("✨ 영어 세특 생성하기", use_container_width=True):
 
                 st.markdown(f"""
                 <div class="count-box">
-                    📊 목표: {target_length}자 | 실제: {char_count}자 (공백제외 {char_count_no_space}자)
+                    📊 목표: {target_length}자 | <b>실제: {char_count}자</b> (공백제외 {char_count_no_space}자)<br>
+                    💾 <b>예상 바이트: {byte_count} Bytes</b> (NEIS 기준)
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -282,8 +284,13 @@ if st.button("✨ 영어 세특 생성하기", use_container_width=True):
                 st.text_area("결과 (복사해서 나이스에 붙여넣으세요)", value=final_text, height=350)
 
             except Exception as e:
-                st.error(f"오류가 발생했습니다: {e}")
-                st.info("💡 팁: GitHub의 requirements.txt 파일에 'google-generativeai>=0.8.3'을 적고 [Reboot] 하면 최신 모델을 쓸 수 있습니다.")
+                # 에러 메시지 처리 (429 등)
+                if "429" in str(e):
+                    st.error("🚨 오늘 사용 가능한 무료 AI 횟수를 모두 쓰셨습니다! (Quota exceeded)")
+                elif "404" in str(e):
+                    st.error("🚨 모델을 찾을 수 없습니다. (requirements.txt 버전을 확인하거나 Reboot 해주세요.)")
+                else:
+                    st.error(f"오류가 발생했습니다: {e}")
 
 # --- 8. 푸터 ---
 st.markdown("""
